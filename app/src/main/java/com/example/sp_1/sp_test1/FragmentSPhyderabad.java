@@ -14,7 +14,8 @@ import android.widget.Spinner;
  */
 public class FragmentSPhyderabad extends Fragment {
     @Nullable
-    Spinner  sport_spinner;
+    Spinner  sport_spinner, Test;
+
     ArrayAdapter<CharSequence> sport_adapter;
 
     public FragmentSPhyderabad(){
