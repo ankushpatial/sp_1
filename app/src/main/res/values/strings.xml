@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Sp_test1</string>
+    <string name="select_place">Select Place</string>
+    <string name="for_fragment"> </string>
+    <string name="select_sport">Select Sport</string>
+
+    <string-array name="city">
+        <item>Hyderabad</item>
+        <item>Delhi</item>
+        <item>Chennai</item>
+        <item>Chandigarh</item>
+    </string-array>
+
+    <string-array name="sport">
+        <item>Cricket</item>
+        <item>Football</item>
+        <item>Tennis</item>
+        <item>Badminton</item>
+    </string-array>
+
+    <string name="action_settings">Settings</string>
+
+</resources>
