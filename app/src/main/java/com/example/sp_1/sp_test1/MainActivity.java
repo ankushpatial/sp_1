@@ -1,5 +1,6 @@
 package com.example.sp_1.sp_test1;
 
+import android.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -30,6 +31,11 @@ public class MainActivity extends AppCompatActivity {
                 if(position==0)
                 {
                     Toast.makeText(MainActivity.this, "Hyderabad Only", Toast.LENGTH_SHORT).show();
+                    getFragmentManager().beginTransaction()
+                            .replace(R.id.main_container, new FragmentSPhyderabad(),"hyderabad")
+                            .addToBackStack("hyderabad")
+                            .commit();
+
                 }
 
                 else if(position==1)
