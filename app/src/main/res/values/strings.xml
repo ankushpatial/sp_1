@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sp_test1</string>
+    <string name="app_name">MyArena</string>
     <string name="select_place">Select Place</string>
     <string name="for_fragment"> </string>
     <string name="select_sport">Select Sport</string>
@@ -11,13 +11,15 @@
         <item>Chandigarh</item>
     </string-array>
 
-    <string-array name="sport">
-        <item>Cricket</item>
-        <item>Football</item>
-        <item>Tennis</item>
-        <item>Badminton</item>
-    </string-array>
+    <!-- Button text -->
+    <string name="btn_logout_from_google">Logout from Google</string>
+    <string name="btn_revoke_access">Revoke Access</string>
+
 
     <string name="action_settings">Settings</string>
+    <string name="Select_Cricket">Select Cricket</string>
+    <string name="Select_Football">Select football</string>
+    <string name="temp">football_hyd</string>
+    <string name="select_badminton">Select Badiminton</string>
 
 </resources>

@@ -1,7 +1,19 @@
 package com.example.sp_1.sp_test1;
 
-import android.app.FragmentManager;
+import android.content.Intent;
+import android.content.IntentSender;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
+import android.util.Log;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.widget.Toast;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -10,74 +22,240 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.Toast;
+import android.view.View;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.SignInButton;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.plus.Plus;
+
+import java.io.InputStream;
+
 public class MainActivity extends AppCompatActivity {
 
-    Spinner spinner;
-    ArrayAdapter<CharSequence> adapter;
+    private GoogleApiClient mGoogleApiClient;
+    private SignInButton btnSignIn;
+    private Button button_revoke,button_logout;
+    private TextView textView_name, textView_email;
+    private RelativeLayout profile_layout;
+    private ImageView imageView_profile_image;
+    private boolean mIntentInProgress;
+    private boolean mSignInClicked;
+    private ConnectionResult mConnectionResult;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate (Bundle savedInstarnce){
+        super.onCreate(savedInstarnce);
         setContentView(R.layout.activity_main);
 
-        spinner = (Spinner)findViewById(R.id.Place);
-        adapter = ArrayAdapter.createFromResource(this,R.array.city, R.layout.support_simple_spinner_dropdown_item);
-        adapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+        btnSignIn = (SignInButton)findViewById(R.id.btn_sign_in);
+        button_revoke = (Button) findViewById(R.id.button_revoke);
+        button_logout = (Button) findViewById(R.id.button_logout);
 
-                if(position==0)
-                {
-                    Toast.makeText(MainActivity.this, "Hyderabad Only", Toast.LENGTH_SHORT).show();
-                    getFragmentManager().beginTransaction()
-                            .replace(R.id.main_container, new FragmentSPhyderabad(),"hyderabad")
-                            .addToBackStack("hyderabad")
-                            .commit();
+        imageView_profile_image = (ImageView) findViewById(R.id.imageView_profile_image);
+        textView_name = (TextView) findViewById(R.id.textView_name);
+        textView_email = (TextView) findViewById(R.id.textView_email);
+        profile_layout = (RelativeLayout) findViewById(R.id.profile_layout);
 
-                }
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(Plus.API)
+                .addScope(Plus.SCOPE_PLUS_LOGIN).build();
 
-                else if(position==1)
-                {
-                    Toast.makeText(MainActivity.this, "Delhi Only", Toast.LENGTH_SHORT).show();
-                }
-                else{
-
-                Toast.makeText(getBaseContext(), parent.getItemAtPosition(position)+ " selected ", Toast.LENGTH_SHORT).show();
-                }
-
-            }
-
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
+        btnSignIn.setOnClickListener(new View.OnClickListener(){
+            public void onClick(View view){
 
             }
         });
+        button_revoke.setOnClickListener(new View.OnClickListener(){
+            public void onClick(View view){
 
+            }
+        });
+        button_logout.setOnClickListener(new View.OnClickListener(){
+            public void onClick(View view){
+
+            }
+        });
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
 
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_sign_in:
+// Signin button clicked
+                signInWithGplus();
+                break;
+            case R.id.button_logout:
+// logout button clicked
+                signOutFromGplus();
+                break;
+            case R.id.button_revoke:
+// revoke button clicked
+                revokeGplusAccess();
+                break;
         }
-
-        return super.onOptionsItemSelected(item);
     }
+    protected void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+    protected void onStop() {
+        super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+    }
+    @Override
+    public void onConnected(Bundle bundle) {
+        mSignInClicked = false;
+        Toast.makeText(this, "User is connected!", Toast.LENGTH_LONG).show();
+// Get user's information
+        getProfileInformation();
+// Update the UI after signin
+        updateUI(true);
+    }
+    @Override
+    public void onConnectionSuspended(int i) {
+        mGoogleApiClient.connect();
+        updateUI(false);
+    }
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+        if (!connectionResult.hasResolution()) {
+            GooglePlayServicesUtil.getErrorDialog(connectionResult.getErrorCode(), this,
+                    0).show();
+            return;
+        }
+        if (!mIntentInProgress) {
+// Store the ConnectionResult for later usage
+            mConnectionResult = connectionResult;
+            if (mSignInClicked) {
+// The user has already clicked 'sign-in' so we attempt to
+// resolve all
+// errors until the user is signed in, or they cancel.
+                resolveSignInError();
+            }
+        }
+    }
+private static final int GOOGLE_SIGIN = 100;
+    private void resolveSignInError() {
+        if (mConnectionResult.hasResolution()) {
+            try {
+                mIntentInProgress = true;
+                mConnectionResult.startResolutionForResult(this, GOOGLE_SIGIN);
+            }
+            catch (IntentSender.SendIntentException e) {
+                mIntentInProgress = false;
+                mGoogleApiClient.connect();
+            }
+        }
+    }
+    @Override
+    protected void onActivityResult(int requestCode, int responseCode,
+                                    Intent intent) {
+        if (requestCode == GOOGLE_SIGIN) {
+            if (responseCode != RESULT_OK) {
+                mSignInClicked = false;
+            }
+            mIntentInProgress = false;
+            if (!mGoogleApiClient.isConnecting()) {
+                mGoogleApiClient.connect();
+            }
+        }
+    }
+    private void updateUI(boolean isSignedIn) {
+        if (isSignedIn) {
+            btnSignIn.setVisibility(View.GONE);
+            profile_layout.setVisibility(View.VISIBLE);
+        } else {
+            btnSignIn.setVisibility(View.VISIBLE);
+            profile_layout.setVisibility(View.GONE);
+        }
+    }
+    private void getProfileInformation() {
+        try {
+            if (Plus.PeopleApi.getCurrentPerson(mGoogleApiClient) != null) {
+                Person currentPerson = Plus.PeopleApi
+                        .getCurrentPerson(mGoogleApiClient);
+                String personName = currentPerson.getDisplayName();
+                String personPhotoUrl = currentPerson.getImage().getUrl();
+                String personGooglePlusProfile = currentPerson.getUrl();
+                String email = Plus.AccountApi.getAccountName(mGoogleApiClient);
+                textView_name.setText(personName);
+                textView_email.setText(email);
+// by default the profile url gives 50x50 px image only
+// we can replace the value with whatever dimension we want by
+// replacing sz=X
+                personPhotoUrl = personPhotoUrl.substring(0,
+                        personPhotoUrl.length() - 2)
+                        + 400;
+                new LoadProfileImage(imageView_profile_image).execute(personPhotoUrl);
+            } else {
+                Toast.makeText(getApplicationContext(),
+                        "Person information is null", Toast.LENGTH_LONG).show();
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private void signInWithGplus() {
+        if (!mGoogleApiClient.isConnecting()) {
+            mSignInClicked = true;
+            resolveSignInError();
+        }
+    }
+    /**
+     * Sign-out from google
+     * */
+    private void signOutFromGplus() {
+        if (mGoogleApiClient.isConnected()) {
+            Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+            mGoogleApiClient.disconnect();
+            mGoogleApiClient.connect();
+            updateUI(false);
+        }
+    }
+    /**
+     * Revoking access from google
+     * */
+    /*private void revokeGplusAccess() {
+        if (mGoogleApiClient.isConnected()) {
+            Plus.AccountApi.clearDefaultAccount(mGoogleApiClient);
+            Plus.AccountApi.revokeAccessAndDisconnect(mGoogleApiClient)
+                    .setResultCallback(new ResultCallback<AsyncTask.Status>() {
+                        @Override
+                        public void onResult(Status arg0) {
+                            Log.e("pavan", "User access revoked!");
+                            mGoogleApiClient.connect();
+                            updateUI(false);
+                        }
+                    });
+        }
+    }
+/**
+ * Background Async task to load user profile picture from url
+ * */
+/*private class LoadProfileImage extends AsyncTask<String, Void, Bitmap> {
+    ImageView bmImage;
+    public LoadProfileImage(ImageView bmImage) {
+        this.bmImage = bmImage;
+    }
+    protected Bitmap doInBackground(String... urls) {
+        String urldisplay = urls[0];
+        Bitmap mIcon11 = null;
+        try {
+            InputStream in = new java.net.URL(urldisplay).openStream();
+            mIcon11 = BitmapFactory.decodeStream(in);
+        } catch (Exception e) {
+            Log.e("Error", e.getMessage());
+            e.printStackTrace();
+        }
+        return mIcon11;
+    }
+    protected void onPostExecute(Bitmap result) {
+        bmImage.setImageBitmap(result);
+    }*/
 }
